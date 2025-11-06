@@ -80,8 +80,8 @@ data/output/*
 data/temp/*
 !data/temp/.gitkeep
 
-# AI Models (large files)
-models/
+# AI Models (large files) - but not source code models
+data/models/
 *.pth
 *.ckpt
 *.safetensors
