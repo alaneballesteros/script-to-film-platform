@@ -1,0 +1,39 @@
+.PHONY: help install dev test lint format clean run
+
+help:
+	@echo "Available commands:"
+	@echo "  make install    - Install production dependencies"
+	@echo "  make dev        - Install development dependencies"
+	@echo "  make test       - Run tests"
+	@echo "  make lint       - Run linters"
+	@echo "  make format     - Format code"
+	@echo "  make clean      - Clean generated files"
+	@echo "  make run        - Run the application"
+
+install:
+	pip install -r requirements.txt
+
+dev:
+	pip install -r requirements.txt
+	pip install -e ".[dev]"
+
+test:
+	pytest tests/ -v --cov=src/script_to_film --cov-report=term-missing
+
+lint:
+	ruff check src/ tests/
+	mypy src/
+
+format:
+	black src/ tests/
+	ruff check --fix src/ tests/
+
+clean:
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete
+	find . -type f -name "*.pyo" -delete
+	rm -rf .pytest_cache .mypy_cache .coverage htmlcov/
+
+run:
+	python -m uvicorn script_to_film.main:app --reload --host 0.0.0.0 --port 8000
