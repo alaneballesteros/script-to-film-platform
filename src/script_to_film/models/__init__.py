@@ -8,6 +8,7 @@ from script_to_film.models.script import (
     ScriptScene,
 )
 from script_to_film.models.video import (
+    SceneVideoGenerateRequest,
     Video,
     VideoGenerateRequest,
     VideoResponse,
@@ -21,6 +22,7 @@ __all__ = [
     "ScriptGenerateRequest",
     "ScriptResponse",
     "ScriptScene",
+    "SceneVideoGenerateRequest",
     "Video",
     "VideoGenerateRequest",
     "VideoResponse",

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaVideo, FaCopy, FaCheck, FaDownload, FaEdit } from 'react-icons/fa';
+import { FaVideo, FaCopy, FaCheck, FaDownload, FaEdit, FaPlay, FaSpinner } from 'react-icons/fa';
 import type { Script, ScriptScene } from '../types';
 
 interface VideoPromptsProps {
@@ -11,6 +11,8 @@ const VideoPrompts: React.FC<VideoPromptsProps> = ({ script, onUpdatePrompt }) =
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editedPrompt, setEditedPrompt] = useState('');
+  const [generatingScenes, setGeneratingScenes] = useState<Set<number>>(new Set());
+  const [generatedScenes, setGeneratedScenes] = useState<Set<number>>(new Set());
 
   const handleCopy = (prompt: string, index: number) => {
     navigator.clipboard.writeText(prompt);
@@ -33,6 +35,69 @@ const VideoPrompts: React.FC<VideoPromptsProps> = ({ script, onUpdatePrompt }) =
   const handleCancelEdit = () => {
     setEditingIndex(null);
     setEditedPrompt('');
+  };
+
+  const handleGenerateVideo = async (scene: ScriptScene, index: number) => {
+    // Confirm with user before spending money
+    const cost = scene.duration_seconds && scene.duration_seconds <= 5 ? '$0.25' : '$0.50';
+    const confirmed = window.confirm(
+      `Generate video for Scene ${scene.scene_number + 1}?\n\n` +
+      `Duration: ${scene.duration_seconds?.toFixed(1)}s\n` +
+      `Estimated cost: ${cost}\n\n` +
+      `This will use your Runway API credits. Continue?`
+    );
+
+    if (!confirmed) return;
+
+    // Mark scene as generating
+    setGeneratingScenes(prev => new Set(prev).add(index));
+
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/videos/scene', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          video_prompt: scene.video_prompt,
+          duration_seconds: scene.duration_seconds || 10,
+          scene_number: scene.scene_number,
+          location: scene.location,
+          time_of_day: scene.time_of_day,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to generate video');
+      }
+
+      const result = await response.json();
+
+      // Mark scene as generated
+      setGeneratedScenes(prev => new Set(prev).add(index));
+
+      alert(
+        `Video generated successfully!\n\n` +
+        `Scene: ${scene.scene_number + 1}\n` +
+        `Video saved to: ${result.visual_path}\n` +
+        `Duration: ${result.duration}s`
+      );
+    } catch (error) {
+      console.error('Error generating video:', error);
+      alert(
+        `Failed to generate video for Scene ${scene.scene_number + 1}\n\n` +
+        `Error: ${error instanceof Error ? error.message : 'Unknown error'}\n\n` +
+        `Please check your Runway API key and try again.`
+      );
+    } finally {
+      // Remove from generating set
+      setGeneratingScenes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(index);
+        return newSet;
+      });
+    }
   };
 
   const handleExportAll = () => {
@@ -138,6 +203,45 @@ const VideoPrompts: React.FC<VideoPromptsProps> = ({ script, onUpdatePrompt }) =
                     <p className="text-gray-800 leading-relaxed">
                       {scene.video_prompt || 'Generating prompt...'}
                     </p>
+                  </div>
+
+                  {/* Prominent Generate Video Button */}
+                  <div className="mb-4">
+                    <button
+                      onClick={() => handleGenerateVideo(scene, index)}
+                      disabled={generatingScenes.has(index)}
+                      className={`w-full flex items-center justify-center space-x-3 px-6 py-4 rounded-lg font-semibold text-lg transition-all ${
+                        generatingScenes.has(index)
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : generatedScenes.has(index)
+                          ? 'bg-green-600 hover:bg-green-700 text-white'
+                          : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg hover:shadow-xl'
+                      }`}
+                    >
+                      {generatingScenes.has(index) ? (
+                        <>
+                          <FaSpinner className="animate-spin text-xl" />
+                          <span>Generating Video... (this may take 30-90 seconds)</span>
+                        </>
+                      ) : generatedScenes.has(index) ? (
+                        <>
+                          <FaCheck className="text-xl" />
+                          <span>Video Generated! Click to Regenerate</span>
+                        </>
+                      ) : (
+                        <>
+                          <FaPlay className="text-xl" />
+                          <div className="text-left">
+                            <div>Generate Video with Runway Gen-3</div>
+                            <div className="text-sm font-normal opacity-90">
+                              Cost: {scene.duration_seconds && scene.duration_seconds <= 5 ? '$0.25' : '$0.50'} •
+                              Duration: {scene.duration_seconds?.toFixed(1)}s •
+                              Uses your API credits
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </button>
                   </div>
 
                   <div className="flex items-center space-x-2">

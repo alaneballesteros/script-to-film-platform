@@ -52,6 +52,16 @@ class VideoGenerateRequest(BaseModel):
     fps: Optional[int] = Field(30, description="Frames per second")
 
 
+class SceneVideoGenerateRequest(BaseModel):
+    """Request to generate video for a single scene."""
+
+    video_prompt: str = Field(..., description="Text-to-video prompt for the scene")
+    duration_seconds: float = Field(..., description="Scene duration in seconds (will be clamped to 5-10 range)")
+    scene_number: int = Field(..., description="Scene number")
+    location: Optional[str] = Field(None, description="Scene location")
+    time_of_day: Optional[str] = Field(None, description="Time of day")
+
+
 class VideoResponse(BaseModel):
     """Response with video metadata."""
 

@@ -67,8 +67,8 @@ class AIService:
             client = anthropic.Anthropic(api_key=self.anthropic_api_key)
 
             message = client.messages.create(
-                model="claude-3-haiku-20240307",
-                max_tokens=6000,
+                model="claude-sonnet-4-5",
+                max_tokens=8192,
                 system="You are a professional screenwriter. Generate short film scripts in proper screenplay format with scene headings (INT./EXT.), action lines, and dialogue. CRITICAL REQUIREMENT: Always create scripts with AT LEAST 3-5 DISTINCT SCENES with different locations or time periods. Each scene must have its own scene heading. Never create single-scene scripts. Keep it concise and cinematic.",
                 messages=[{"role": "user", "content": user_prompt}],
             )
@@ -97,6 +97,33 @@ SARAH
 Of course not! How have you been?
 
 They sit and talk about their shared project.
+
+INT. SARAH'S APARTMENT - NIGHT
+
+Sarah reviews her notes from the meeting. Her phone RINGS.
+
+SARAH
+(answering)
+Hello?
+
+She listens intently, then smiles.
+
+SARAH (CONT'D)
+That's perfect! I'll send it over tonight.
+
+She hangs up and gets back to work with renewed energy.
+
+EXT. PARK - MORNING
+
+Sarah and John meet again, this time in a sunny park.
+
+JOHN
+You did it! The project is approved!
+
+SARAH
+We did it together.
+
+They high-five and walk off together as the sun shines brightly.
 
 EXT. PARK - EVENING
 

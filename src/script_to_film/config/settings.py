@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     openai_api_key: str
     anthropic_api_key: str
     runway_api_key: str
+    runwayml_api_secret: str
 
     # Storage (AWS S3)
     aws_access_key_id: str

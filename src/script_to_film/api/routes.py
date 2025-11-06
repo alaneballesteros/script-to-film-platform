@@ -10,7 +10,13 @@ from script_to_film.models.script import (
     ScriptGenerateRequest,
     ScriptResponse,
 )
-from script_to_film.models.video import VideoGenerateRequest, VideoResponse
+from script_to_film.models.video import (
+    SceneVideoGenerateRequest,
+    VideoGenerateRequest,
+    VideoResponse,
+    VideoScene,
+    VideoStatus,
+)
 from script_to_film.services.ai_service import AIService
 from script_to_film.services.script_parser import ScriptParser
 from script_to_film.services.video_generator import VideoGenerator
@@ -200,3 +206,39 @@ async def list_videos(skip: int = 0, limit: int = 100) -> List[VideoResponse]:
     """
     # In production, fetch from database
     return []
+
+
+@router.post("/videos/scene", response_model=VideoScene, status_code=status.HTTP_201_CREATED)
+async def generate_scene_video(request: SceneVideoGenerateRequest) -> VideoScene:
+    """
+    Generate video for a single scene using Runway Gen-3.
+
+    Args:
+        request: Scene video generation request
+
+    Returns:
+        VideoScene with generation status and video path
+    """
+    from script_to_film.models.script import ScriptScene
+
+    # Convert request to ScriptScene
+    scene = ScriptScene(
+        scene_number=request.scene_number,
+        location=request.location or "Unknown",
+        time_of_day=request.time_of_day or "DAY",
+        description="",
+        dialogue=[],
+        duration_seconds=request.duration_seconds,
+        video_prompt=request.video_prompt,
+    )
+
+    # Generate video using Runway Gen-3
+    video_scene = await video_generator.generate_scene_video_runway(scene, request.scene_number)
+
+    if video_scene is None or video_scene.status == VideoStatus.FAILED:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to generate video for scene. Check backend logs for details.",
+        )
+
+    return video_scene

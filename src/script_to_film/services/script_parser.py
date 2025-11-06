@@ -11,8 +11,11 @@ class ScriptParser:
 
     def __init__(self) -> None:
         """Initialize the script parser."""
+        # More flexible pattern that accepts any time of day and markdown formatting
+        # Matches: INT./EXT. LOCATION - TIME or **INT./EXT. LOCATION - TIME** (markdown bold)
+        # Uses greedy matching for location to capture everything up to the last dash before time
         self.scene_pattern = re.compile(
-            r"(?:INT\.|EXT\.)\s+(.+?)\s+-\s+(DAY|NIGHT|MORNING|EVENING)", re.IGNORECASE
+            r"\*{0,2}(?:INT\.|EXT\.)\s+(.+)\s+-\s+([A-Z]+)\*{0,2}",re.IGNORECASE
         )
 
     def parse(self, script_content: str, title: str, author: Optional[str] = None) -> Script:
@@ -29,6 +32,18 @@ class ScriptParser:
         """
         scenes = self._extract_scenes(script_content)
         total_duration = sum(scene.duration_seconds or 0 for scene in scenes)
+
+        print(f"\n=== SCRIPT PARSER DEBUG ===")
+        print(f"Script title: {title}")
+        print(f"Content length: {len(script_content)} characters")
+        print(f"Scenes found: {len(scenes)}")
+        if scenes:
+            print(f"First scene location: {scenes[0].location}")
+            print(f"First scene has video_prompt: {bool(scenes[0].video_prompt)}")
+        else:
+            print("WARNING: No scenes were parsed! Check script format.")
+            print(f"Script preview: {script_content[:500]}")
+        print(f"=========================\n")
 
         return Script(
             title=title,
@@ -93,32 +108,53 @@ class ScriptParser:
         description_words = len(scene_data["description"].split())
         description_duration = description_words * 0.3  # ~0.3 seconds per word
 
-        # Generate video prompt for the scene
+        # Generate optimized video prompt for the scene
         location = scene_data["location"]
         time_of_day = scene_data["time_of_day"]
         description = scene_data["description"].strip()
 
+        # Determine camera angle variety based on scene number for dynamic filming
+        camera_angles = [
+            "Medium shot",
+            "Wide angle establishing shot",
+            "Close-up shot",
+            "Low angle shot",
+            "Over-the-shoulder shot",
+            "Dutch angle shot",
+            "High angle shot",
+            "Tracking shot"
+        ]
+        camera_angle = camera_angles[scene_number % len(camera_angles)]
+
         # Determine lighting and atmosphere based on time of day
         lighting = ""
         if "DAY" in time_of_day.upper():
-            lighting = "natural daylight, bright and clear"
+            lighting = "natural daylight, bright and clear, high contrast"
         elif "NIGHT" in time_of_day.upper():
-            lighting = "low-key lighting, atmospheric shadows, cinematic night"
+            lighting = "low-key lighting, atmospheric shadows, deep blacks, cinematic night"
         elif "MORNING" in time_of_day.upper():
-            lighting = "soft morning light, golden hour"
+            lighting = "soft morning light, golden hour glow, warm tones"
         elif "EVENING" in time_of_day.upper() or "DUSK" in time_of_day.upper():
-            lighting = "warm golden hour lighting, sunset glow"
+            lighting = "warm golden hour lighting, orange and pink sunset glow, rim lighting"
         else:
-            lighting = "cinematic lighting"
+            lighting = "cinematic lighting, dramatic contrast"
 
-        # Determine interior/exterior
-        int_ext = "Interior" if "INT" in location else "Exterior"
+        # Determine interior/exterior and add environment details
+        if "INT" in location:
+            env_type = "Interior"
+            env_details = "realistic indoor environment, detailed set design, depth of field"
+        else:
+            env_type = "Exterior"
+            env_details = "outdoor setting, natural environment, atmospheric depth"
 
-        # Build the video prompt
+        # Build the video prompt following Runway Gen-3 format:
+        # [camera movement]: [establishing scene]. [additional details]
         video_prompt = (
-            f"{int_ext} of {location.lower()} during {time_of_day.lower()}, "
-            f"{lighting}. {description} "
-            f"Cinematic composition, professional film quality, 4K, realistic."
+            f"{camera_angle}: {env_type} of {location.lower()} during {time_of_day.lower()}. "
+            f"{description} "
+            f"{lighting}. {env_details}. "
+            f"Cinematic composition, professional film quality, 4K resolution, realistic textures and materials, "
+            f"subtle camera movement, film grain, shallow depth of field."
         )
 
         return ScriptScene(
